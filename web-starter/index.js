@@ -33,19 +33,44 @@ module.exports = generators.Base.extend({
           }
         });
       }
-      else if (this.options.parent.answers.platform === 'wordpress') {
-        //TODO https://github.com/forumone/gesso-theme-wordpress
-      }
     }
   },
   prompting : function() {
     var done = this.async();
     var that = this;
+    var config = _.extend({
+      install_pattern_lab : true,
+    }, this.config.getAll());
     that.prompt([{
       type: 'confirm',
       name: 'install_gesso',
       message: 'Install a fresh copy of the gesso theme?',
+      default: false
+    },
+    {
+      type: 'confirm',
+      name: 'install_pattern_lab',
+      message: 'Install pattern lab?',
+      default: config.install_pattern_lab,
+      when: function(answers) {
+        // only available for drupal
+        if(that.options.parent.answers.platform === 'drupal') {
+          return true;
+        }
+        else {
+          return false;
+        }
+      }
+    },
+    {
+      type: 'confirm',
+      name: 'install_pattern_lab_confirm',
+      message: 'Install a fresh copy of pattern lab?',
       default: false,
+      when: function(answers) {
+        // if the user doesn't want to install pattern lab, this question is not asked
+        return answers.install_pattern_lab;
+      }
     }], function (answers) {
       _.extend(that.config, answers);
       done();
@@ -53,14 +78,95 @@ module.exports = generators.Base.extend({
   },
   writing : {
     settings : function() {
+      var that = this;
       if(this.options.parent.answers.platform === 'drupal') {
         if(this.config.install_gesso) {
-          // https://github.com/kevva/download
-          new Download({extract: true}).get(this.config.gessoDl, 'public/themes/').dest('.').run();
+          // new Download({extract: true}).get(this.config.gessoDl, 'sites/all/themes/').dest('.').run();
+          // Create a Promise for remote downloading
+          var remote = new Promise(function(resolve, reject) {
+            that.remote(that.config.gessoDl, function(err, remote) {
+              if (err) {
+                reject(err);
+              }
+              else {
+                resolve(remote);
+              }
+            });
+          });
+          
+          // Begin Promise chain
+          remote.bind(this).then(function(remote) {
+            this.remote = remote;
+            return glob('**', { cwd : remote.cachePath });
+          }).then(function(files) {
+            var remote = this.remote;
+            
+            _.each(files, function(file) {
+              that.fs.copy(
+                remote.cachePath + '/' + file,
+                that.destinationPath('public/sites/all/themes/gesso/' + file)
+              );
+            });
+          });
+        }
+        if(this.config.install_pattern_lab_confirm) {
+          // Create a Promise for remote downloading
+          var remote = new Promise(function(resolve, reject) {
+            that.remote('dcmouyard', 'patternlab-php-gesso', 'master', function(err, remote) {
+              if (err) {
+                reject(err);
+              }
+              else {
+                resolve(remote);
+              }
+            }, true);
+          });
+          
+          // Begin Promise chain
+          remote.bind(this).then(function(remote) {
+            this.remote = remote;
+            return glob('**', { cwd : remote.cachePath });
+          }).then(function(files) {
+            var remote = this.remote;
+            
+            _.each(files, function(file) {
+              that.fs.copy(
+                remote.cachePath + '/' + file,
+                that.destinationPath('public/sites/all/themes/patternlab/' + file)
+              );
+            });
+          });
         }
       }
       else if (this.options.parent.answers.platform === 'wordpress') {
-        //TODO 
+        if(this.config.install_gesso) {
+          // Create a Promise for remote downloading
+          var remote = new Promise(function(resolve, reject) {
+            that.remote('forumone', 'gesso-theme-wordpress', 'master', function(err, remote) {
+              if (err) {
+                reject(err);
+              }
+              else {
+                resolve(remote);
+              }
+            }, true);
+          });
+          
+          // Begin Promise chain
+          remote.bind(this).then(function(remote) {
+            this.remote = remote;
+            return glob('**', { cwd : remote.cachePath });
+          }).then(function(files) {
+            var remote = this.remote;
+            
+            _.each(files, function(file) {
+              that.fs.copy(
+                remote.cachePath + '/' + file,
+                that.destinationPath('public/wp-content/themes/' + file)
+              );
+            });
+          });
+        }
       }
     }
   }
