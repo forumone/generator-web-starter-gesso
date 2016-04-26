@@ -9,3 +9,5 @@ It shouldn't be use directly.
 [gesso for drupal](https://www.drupal.org/project/gesso)
 
 [gesso for wordpress](https://github.com/forumone/gesso-theme-wordpress)
+
+[patternlab for drupal](https://github.com/dcmouyard/patternlab-php-gesso)
