@@ -13,6 +13,41 @@ var generators = require('yeoman-generator'),
 
 var DRUPAL_GESSO_URL = "https://updates.drupal.org/release-history/gesso/all";
 
+/**
+ * download and deploy an archive
+ * @param archiveUrl
+ * @param destinationPath
+ */
+function downloadAndDeploy(that, archiveUrl, destinationPath) {
+  // Create a Promise for remote downloading
+  var remote = new Promise(function(resolve, reject) {
+    that.remote(archiveUrl, function(err, remote) {
+      if (err) {
+        reject(err);
+      }
+      else {
+        resolve(remote);
+      }
+    });
+  });
+  
+  // Begin Promise chain
+  remote.bind(that).then(function(remote) {
+    this.remote = remote;
+    return glob('**', { cwd : remote.cachePath });
+  }).then(function(files) {
+    var remote = this.remote;
+    
+    _.each(files, function(file) {
+      that.fs.copy(
+        remote.cachePath + '/' + file,
+        that.destinationPath(destinationPath + file)
+      );
+    });
+  });
+  return remote;
+}
+
 module.exports = generators.Base.extend({
   initializing : {
     version : function() {
@@ -94,6 +129,7 @@ module.exports = generators.Base.extend({
               livereload : true
             }
           });
+          this.options.getPlugin('grunt').addGruntTasks('watch', 'grunt-contrib-watch', 'compass', "{files : [ '<%= pkg.themePath %>/sass/**/*.scss' ], tasks : [ 'compass:' + environment ],}");
           this.options.getPlugin('grunt').addGruntTasks('shell', 'grunt-shell', 'patternlab', {
             command : 'php core/builder.php -g',
             options : {
@@ -102,6 +138,7 @@ module.exports = generators.Base.extend({
               }
             }
           });
+          this.options.addDevDependency('grunt-contrib-watch', '^0.6.1');
           this.options.addDevDependency('grunt-contrib-copy', '^0.8.0');
           this.options.addDevDependency('grunt-shell', '^1.2.1');
         }
@@ -112,97 +149,20 @@ module.exports = generators.Base.extend({
     }
   },
   writing : {
-    settings : function() {
-      var that = this;
-      if(this.options.parent.answers.platform === 'drupal') {
-        if(this.config.install_gesso) {
-          // new Download({extract: true}).get(this.config.gessoDl, 'sites/all/themes/').dest('.').run();
-          // Create a Promise for remote downloading
-          var remote = new Promise(function(resolve, reject) {
-            that.remote(that.config.gessoDl, function(err, remote) {
-              if (err) {
-                reject(err);
-              }
-              else {
-                resolve(remote);
-              }
-            });
-          });
-          
-          // Begin Promise chain
-          remote.bind(this).then(function(remote) {
-            this.remote = remote;
-            return glob('**', { cwd : remote.cachePath });
-          }).then(function(files) {
-            var remote = this.remote;
-            
-            _.each(files, function(file) {
-              that.fs.copy(
-                remote.cachePath + '/' + file,
-                that.destinationPath('public/sites/all/themes/gesso/' + file)
-              );
-            });
-          });
-        }
-        if(this.config.install_pattern_lab_confirm) {
-          // Create a Promise for remote downloading
-          var remote = new Promise(function(resolve, reject) {
-            that.remote('dcmouyard', 'patternlab-php-gesso', 'master', function(err, remote) {
-              if (err) {
-                reject(err);
-              }
-              else {
-                resolve(remote);
-              }
-            }, true);
-          });
-          
-          // Begin Promise chain
-          remote.bind(this).then(function(remote) {
-            this.remote = remote;
-            return glob('**', { cwd : remote.cachePath });
-          }).then(function(files) {
-            var remote = this.remote;
-            
-            _.each(files, function(file) {
-              that.fs.copy(
-                remote.cachePath + '/' + file,
-                that.destinationPath('public/sites/all/themes/pattern-lab/' + file)
-              );
-            });
-          });
-        }
+    drupalGesso : function() {
+      if(this.options.parent.answers.platform === 'drupal' && this.config.install_gesso) {
+        downloadAndDeploy(this, this.config.gessoDl, 'public/sites/all/themes/gesso/');
       }
-      else if (this.options.parent.answers.platform === 'wordpress') {
-        if(this.config.install_gesso) {
-          // Create a Promise for remote downloading
-          var remote = new Promise(function(resolve, reject) {
-            that.remote('forumone', 'gesso-theme-wordpress', 'master', function(err, remote) {
-              if (err) {
-                reject(err);
-              }
-              else {
-                resolve(remote);
-              }
-            }, true);
-          });
-          
-          // Begin Promise chain
-          remote.bind(this).then(function(remote) {
-            this.remote = remote;
-            return glob('**', { cwd : remote.cachePath });
-          }).then(function(files) {
-            var remote = this.remote;
-            
-            _.each(files, function(file) {
-              that.fs.copy(
-                remote.cachePath + '/' + file,
-                that.destinationPath('public/wp-content/themes/' + file)
-              );
-            });
-          });
-        }
+    },
+    drupalPatternlab : function() {
+      if(this.options.parent.answers.platform === 'drupal' && this.config.install_pattern_lab_confirm) {
+        downloadAndDeploy(this, 'https://api.github.com/repos/dcmouyard/patternlab-php-gesso/tarball/master', 'public/sites/all/themes/pattern-lab/');
       }
+    },
+    wordpress : function() {
+      if (this.options.parent.answers.platform === 'wordpress' && this.config.install_gesso) {
+        downloadAndDeploy(this, 'https://api.github.com/repos/forumone/gesso-theme-wordpress/tarball/master', 'public/wp-content/themes/');
+      }      
     }
   }
 });
