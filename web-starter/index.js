@@ -72,9 +72,44 @@ module.exports = generators.Base.extend({
         return answers.install_pattern_lab;
       }
     }], function (answers) {
+      that.config.set(answers);
       _.extend(that.config, answers);
       done();
     });
+  },
+  configuring : {
+    grunt : function() {
+      if(this.config.install_pattern_lab) {
+        if(typeof this.options.getPlugin === "function" && this.options.getPlugin('grunt')) {
+          this.options.getPlugin('grunt').addGruntTasks('copy', 'grunt-contrib-copy', 'patternlab', {
+            expand : true,
+            cwd : '<%= pkg.themePath %>/pattern-lab/core/styleguide/',
+            src : '**',
+            dest : '<%= pkg.themePath %>/pattern-lab/public/styleguide/'
+          });
+          this.options.getPlugin('grunt').addGruntTasks('watch', 'grunt-contrib-watch', 'patternlab', {
+            files : [ '<%= pkg.themePath %>/pattern-lab/source/**/*' ],
+            tasks : [ 'shell:patternlab' ],
+            options : {
+              livereload : true
+            }
+          });
+          this.options.getPlugin('grunt').addGruntTasks('shell', 'grunt-shell', 'patternlab', {
+            command : 'php core/builder.php -g',
+            options : {
+              execOptions : {
+                cwd : '<%= pkg.themePath %>/pattern-lab'
+              }
+            }
+          });
+          this.options.addDevDependency('grunt-contrib-copy', '^0.8.0');
+          this.options.addDevDependency('grunt-shell', '^1.2.1');
+        }
+        else {
+          console.log('INFO: grunt generartion not available');
+        }
+      }
+    }
   },
   writing : {
     settings : function() {
@@ -132,7 +167,7 @@ module.exports = generators.Base.extend({
             _.each(files, function(file) {
               that.fs.copy(
                 remote.cachePath + '/' + file,
-                that.destinationPath('public/sites/all/themes/patternlab/' + file)
+                that.destinationPath('public/sites/all/themes/pattern-lab/' + file)
               );
             });
           });
