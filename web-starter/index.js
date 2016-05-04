@@ -5,68 +5,40 @@ var generators = require('yeoman-generator'),
   rp = require('request-promise'),
   semver = require('semver'),
   libxmljs = require("libxmljs"),
-  request = require("request"),
   glob = Promise.promisify(require('glob')),
   http = require('http'),
   fs = require('fs'),
-  Download = require('download');
+  ygp = require('yeoman-generator-bluebird');
 
 var DRUPAL_GESSO_URL = "https://updates.drupal.org/release-history/gesso/all";
 
-/**
- * download and deploy an archive
- * @param archiveUrl
- * @param destinationPath
- */
-function downloadAndDeploy(that, archiveUrl, destinationPath) {
-  // Create a Promise for remote downloading
-  var remote = new Promise(function(resolve, reject) {
-    that.remote(archiveUrl, function(err, remote) {
-      if (err) {
-        reject(err);
-      }
-      else {
-        resolve(remote);
-      }
-    });
-  });
-  
-  // Begin Promise chain
-  remote.bind(that).then(function(remote) {
-    this.remote = remote;
-    return glob('**', { cwd : remote.cachePath });
-  }).then(function(files) {
-    var remote = this.remote;
-    
-    _.each(files, function(file) {
-      that.fs.copy(
-        remote.cachePath + '/' + file,
-        that.destinationPath(destinationPath + file)
-      );
-    });
-  });
-  return remote;
-}
-
 module.exports = generators.Base.extend({
   initializing : {
+    async : function() {
+      ygp(this);
+    },
     version : function() {
-      if(!this.options.parent) {
-        //for test purposes 
+      var done = this.async();
+      
+      if (!this.options.parent) {
+        // for test purposes
         this.options.parent = {};
         this.options.parent.answers = {};
         this.options.parent.answers.platform = 'drupal';
       }
       var that = this;
-      if(this.options.parent.answers.platform === 'drupal') {
-        request({url : DRUPAL_GESSO_URL}, function(error, response, body) {
-          if (!error && response.statusCode === 200) {
-            that.config.gessoDl = libxmljs.parseXml(body).get('//release/download_link').text();
-          }
-          else {
-            console.log('ERROR unable to retrieve gesso version number from Drupal: ' + DRUPAL_GESSO_URL);
-          }
+      
+      if (this.options.parent.answers.platform === 'drupal') {
+        rp({url : DRUPAL_GESSO_URL})
+        .then(function(response) {
+          that.config.gessoDl = libxmljs.parseXml(response).get('//release/download_link').text();
+        })
+        .finally(function() {
+          done();
         });
+      }
+      else {
+        done();
       }
     }
   },
@@ -76,7 +48,7 @@ module.exports = generators.Base.extend({
     var config = _.extend({
       install_pattern_lab : true,
     }, this.config.getAll());
-    that.prompt([{
+    this.promptAsync([{
       type: 'confirm',
       name: 'install_gesso',
       message: 'Install a fresh copy of the gesso theme?',
@@ -85,84 +57,129 @@ module.exports = generators.Base.extend({
     {
       type: 'confirm',
       name: 'install_pattern_lab',
-      message: 'Install pattern lab?',
+      message: 'Does this project use Pattern Lab?',
       default: config.install_pattern_lab,
-      when: function(answers) {
-        // only available for drupal
-        if(that.options.parent.answers.platform === 'drupal') {
-          return true;
-        }
-        else {
-          return false;
-        }
-      }
     },
     {
       type: 'confirm',
       name: 'install_pattern_lab_confirm',
-      message: 'Install a fresh copy of pattern lab?',
+      message: 'Install a fresh copy of Pattern Lab?',
       default: false,
       when: function(answers) {
-        // if the user doesn't want to install pattern lab, this question is not asked
+        // if the user doesn't want to install pattern lab, this question is not
+        // asked
         return answers.install_pattern_lab;
       }
-    }], function (answers) {
+    }]).then(function (answers) {
       that.config.set(answers);
       _.extend(that.config, answers);
+    })
+    .finally(function() {
       done();
     });
   },
   configuring : {
-    grunt : function() {
-      if(this.config.install_pattern_lab) {
-        if(typeof this.options.getPlugin === "function" && this.options.getPlugin('grunt')) {
-          this.options.getPlugin('grunt').addGruntTasks('copy', 'grunt-contrib-copy', 'patternlab', {
-            expand : true,
-            cwd : '<%= pkg.themePath %>/pattern-lab/core/styleguide/',
-            src : '**',
-            dest : '<%= pkg.themePath %>/pattern-lab/public/styleguide/'
-          });
-          this.options.getPlugin('grunt').addGruntTasks('watch', 'grunt-contrib-watch', 'patternlab', {
-            files : [ '<%= pkg.themePath %>/pattern-lab/source/**/*' ],
-            tasks : [ 'shell:patternlab' ],
-            options : {
-              livereload : true
-            }
-          });
-          this.options.getPlugin('grunt').addGruntTasks('watch', 'grunt-contrib-watch', 'compass', "{files : [ '<%= pkg.themePath %>/sass/**/*.scss' ], tasks : [ 'compass:' + environment ],}");
-          this.options.getPlugin('grunt').addGruntTasks('shell', 'grunt-shell', 'patternlab', {
-            command : 'php core/builder.php -g',
-            options : {
-              execOptions : {
-                cwd : '<%= pkg.themePath %>/pattern-lab'
-              }
-            }
-          });
-          this.options.addDevDependency('grunt-contrib-watch', '^0.6.1');
+    gruntPatternlab : function() {
+      var done = this.async();
+      
+      if (this.config.install_pattern_lab) {
+        if (typeof this.options.getPlugin === "function" && this.options.getPlugin('grunt')) {
+          // Add copy task for Pattern Lab
+          var copy = this.options.getPlugin('grunt').getGruntTask('copy');
+          copy.insertConfig('copy.patternlabStyleguide', this.fs.read(this.templatePath('tasks/patternlab/copy.js')));
+          copy.loadNpmTasks('grunt-contrib-copy');
           this.options.addDevDependency('grunt-contrib-copy', '^0.8.0');
-          this.options.addDevDependency('grunt-shell', '^1.2.1');
+          
+          // Watch task for Pattern Lab
+          var watch = this.options.getPlugin('grunt').getGruntTask('watch');
+          watch.insertConfig('watch.patternlab', this.fs.read(this.templatePath('tasks/patternlab/watch.js')));
+          watch.loadNpmTasks('grunt-contrib-watch');
+          watch.loadNpmTasks('grunt-simple-watch');
+          this.options.addDevDependency('grunt-contrib-watch', '^0.6.1');
+          this.options.addDevDependency('grunt-simple-watch', '^0.1.2');
+          
+          // Shell task for Pattern Lab
+          var shell = this.options.getPlugin('grunt').getGruntTask('shell');
+          shell.insertConfig('shell.patternlab', this.fs.read(this.templatePath('tasks/patternlab/shell.js')));
+          shell.loadNpmTasks('grunt-shell');
+          this.options.addDevDependency('grunt-shell', '^1.1.2');
+          
+          done();
         }
-        else {
-          console.log('INFO: grunt generartion not available');
-        }
+      }
+      else {
+        done();
       }
     }
   },
   writing : {
-    drupalGesso : function() {
-      if(this.options.parent.answers.platform === 'drupal' && this.config.install_gesso) {
-        downloadAndDeploy(this, this.config.gessoDl, 'public/sites/all/themes/gesso/');
+    theme : function() {
+      var done = this.async();
+      var that = this;
+      var url = null;
+      
+      switch (this.options.parent.answers.platform) {
+        case 'wordpress':
+          url = 'https://api.github.com/repos/forumone/gesso-theme-wordpress/tarball/master';
+          break;
+        
+        case 'drupal':
+          url = this.config.gessoDl;
+          break;
+      }
+      if (url && this.config.install_pattern_lab_confirm) {
+        this.remoteAsync(url)
+        .bind({})
+        .then(function(remote) {
+          this.remotePath = remote.cachePath;
+          return glob('**', { cwd : remote.cachePath });
+        })
+        .then(function(files) {
+          var remotePath = this.remotePath;
+          
+          _.each(files, function(file) {
+            that.fs.copy(
+              remotePath + '/' + file,
+              that.destinationPath(that.options.parent.answers.theme_path + '/' + file)
+            );
+          });
+        })
+        .finally(function() {
+          done();
+        });
+      }
+      else {
+        done();
       }
     },
-    drupalPatternlab : function() {
-      if(this.options.parent.answers.platform === 'drupal' && this.config.install_pattern_lab_confirm) {
-        downloadAndDeploy(this, 'https://api.github.com/repos/dcmouyard/patternlab-php-gesso/tarball/master', 'public/sites/all/themes/pattern-lab/');
+    patternLab : function() {
+      var done = this.async();
+      var that = this;
+      
+      if (this.config.install_pattern_lab_confirm) {
+        this.remoteAsync('dcmouyard', 'patternlab-php-gesso', 'master')
+        .bind({})
+        .then(function(remote) {
+          this.remotePath = remote.cachePath;
+          return glob('**', { cwd : remote.cachePath });
+        })
+        .then(function(files) {
+          var remotePath = this.remotePath;
+          
+          _.each(files, function(file) {
+            that.fs.copy(
+              remotePath + '/' + file,
+              that.destinationPath(that.options.parent.answers.theme_path + '/pattern-lab/' + file)
+            );
+          });
+        })
+        .finally(function() {
+          done();
+        });
       }
-    },
-    wordpress : function() {
-      if (this.options.parent.answers.platform === 'wordpress' && this.config.install_gesso) {
-        downloadAndDeploy(this, 'https://api.github.com/repos/forumone/gesso-theme-wordpress/tarball/master', 'public/wp-content/themes/');
-      }      
+      else {
+        done();
+      }
     }
   }
 });
