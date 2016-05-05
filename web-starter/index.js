@@ -11,6 +11,7 @@ var generators = require('yeoman-generator'),
   ygp = require('yeoman-generator-bluebird');
 
 var DRUPAL_GESSO_URL = "https://updates.drupal.org/release-history/gesso/all";
+var SASS_CHOICES = ['Libsass','Ruby Sass']
 
 module.exports = generators.Base.extend({
   initializing : {
@@ -47,12 +48,29 @@ module.exports = generators.Base.extend({
     var that = this;
     var config = _.extend({
       install_pattern_lab : true,
+      install_sass : true
     }, this.config.getAll());
     this.promptAsync([{
       type: 'confirm',
       name: 'install_gesso',
       message: 'Install a fresh copy of the gesso theme?',
       default: false
+    },
+    {
+      type: 'confirm',
+      name: 'install_sass',
+      message: 'Does this project use Sass?',
+      default: config.install_sass,
+    },
+    {
+      type : 'list',
+      name : 'sass',
+      choices : SASS_CHOICES,
+      message : 'Sass compilation',
+      default : config.sass,
+      when: function(answers) {
+        return answers.install_sass;
+      }
     },
     {
       type: 'confirm',
@@ -110,6 +128,50 @@ module.exports = generators.Base.extend({
       else {
         done();
       }
+    },
+    gruntLibSass : function() {
+      var done = this.async();
+      if (this.config.sass === SASS_CHOICES[0]) { //lib sass
+        if(this.options.getPlugin('grunt')) {
+          var editor = this.options.getPlugin('grunt').getGruntTask('postcss');
+          editor.insertConfig('postcss', this.fs.read(this.templatePath('tasks/sass/postcss.js')));
+          editor.loadNpmTasks('grunt-postcss');
+          editor.prependJavaScript('var assets  = require(\'postcss-assets\');');
+          this.options.addDevDependency('grunt-postcss', '^0.8.0');
+
+          var editor = this.options.getPlugin('grunt').getGruntTask('sass');
+          editor.insertConfig('sass', this.fs.read(this.templatePath('tasks/sass/sass.js')));
+          editor.loadNpmTasks('grunt-sass');
+          this.options.addDevDependency('grunt-sass', '^1.2.0');
+
+          var editor = this.options.getPlugin('grunt').getGruntTask('sass_globbing');
+          editor.insertConfig('sass_globbing', this.fs.read(this.templatePath('tasks/sass/sass_globbing.js')));
+          editor.loadNpmTasks('grunt-sass-globbing');
+          this.options.addDevDependency('grunt-sass-globbing', '^1.4.0');
+
+          var editor = this.options.getPlugin('grunt').getGruntTask('watch');
+          editor.insertConfig('sass', this.fs.read(this.templatePath('tasks/sass/watch.js')));
+        }
+        else {
+          console.log('INFO unable to write libsass grunt task because Grunt plugin not selected for this project');
+        }
+      }
+      done();
+    },
+    gruntRubySass : function() {
+      var done = this.async();
+      if (this.config.sass === SASS_CHOICES[1]) { // ruby sass
+        if(this.options.getPlugin('grunt')) {
+          var editor = this.options.getPlugin('grunt').getGruntTask('compass');
+          editor.insertConfig('compass', this.fs.read(this.templatePath('tasks/sass/compass.js')));
+          editor.loadNpmTasks('grunt-contrib-compass');
+          this.options.addDevDependency('grunt-contrib-compass', '^1.1.1');
+        }
+        else {
+          console.log('INFO unable to write ruby sass grunt task because Grunt plugin not selected for this project');
+        }
+      }
+      done();
     }
   },
   writing : {
