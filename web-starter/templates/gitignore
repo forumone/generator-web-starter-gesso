@@ -1,0 +1,12 @@
+# IDE specific files
+.buildpath
+.project
+.settings
+.idea
+
+.DS_Store
+public/*
+config.ini
+latest-change.txt
+*-ck.js
+*.sass-cache/

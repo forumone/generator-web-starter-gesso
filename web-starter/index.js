@@ -61,6 +61,13 @@ module.exports = generators.Base.extend({
       name: 'install_sass',
       message: 'Does this project use Sass?',
       default: config.install_sass,
+      when: function(answers) {
+        if (that.options.getPlugin('grunt')) {
+          return true;
+        }
+        console.log('INFO: you have to enable Grunt to be able to configure Sass here. Sass configuration skiped.');
+        return false;
+      }
     },
     {
       type : 'list',
@@ -69,7 +76,10 @@ module.exports = generators.Base.extend({
       message : 'Sass compilation',
       default : config.sass,
       when: function(answers) {
-        return answers.install_sass;
+        if (that.options.getPlugin('grunt') && answers.install_sass) {
+          return true;
+        }
+        return false;
       }
     },
     {
@@ -100,34 +110,30 @@ module.exports = generators.Base.extend({
     gruntPatternlab : function() {
       var done = this.async();
       
-      if (this.config.install_pattern_lab) {
-        if (typeof this.options.getPlugin === "function" && this.options.getPlugin('grunt')) {
-          // Add copy task for Pattern Lab
-          var copy = this.options.getPlugin('grunt').getGruntTask('copy');
-          copy.insertConfig('copy.patternlabStyleguide', this.fs.read(this.templatePath('tasks/patternlab/copy.js')));
-          copy.loadNpmTasks('grunt-contrib-copy');
-          this.options.addDevDependency('grunt-contrib-copy', '^0.8.0');
+      if (typeof this.options.getPlugin === "function" && this.options.getPlugin('grunt') && this.config.install_pattern_lab) {
+        // Add copy task for Pattern Lab
+        var copy = this.options.getPlugin('grunt').getGruntTask('copy');
+        copy.insertConfig('copy.patternlabStyleguide', this.fs.read(this.templatePath('tasks/patternlab/copy.js')));
+        copy.loadNpmTasks('grunt-contrib-copy');
+        this.options.addDevDependency('grunt-contrib-copy', '^0.8.0');
           
-          // Watch task for Pattern Lab
-          var watch = this.options.getPlugin('grunt').getGruntTask('watch');
-          watch.insertConfig('watch.patternlab', this.fs.read(this.templatePath('tasks/patternlab/watch.js')));
-          watch.loadNpmTasks('grunt-contrib-watch');
-          watch.loadNpmTasks('grunt-simple-watch');
-          this.options.addDevDependency('grunt-contrib-watch', '^0.6.1');
-          this.options.addDevDependency('grunt-simple-watch', '^0.1.2');
+        // Watch task for Pattern Lab
+        var watch = this.options.getPlugin('grunt').getGruntTask('watch');
+        watch.insertConfig('watch.patternlab', this.fs.read(this.templatePath('tasks/patternlab/watch.js')));
+        watch.loadNpmTasks('grunt-contrib-watch');
+        watch.loadNpmTasks('grunt-simple-watch');
+        this.options.addDevDependency('grunt-contrib-watch', '^0.6.1');
+        this.options.addDevDependency('grunt-simple-watch', '^0.1.2');
+        
+        // Shell task for Pattern Lab
+        var shell = this.options.getPlugin('grunt').getGruntTask('shell');
+        shell.insertConfig('shell.patternlab', this.fs.read(this.templatePath('tasks/patternlab/shell.js')));
+        shell.loadNpmTasks('grunt-shell');
+        this.options.addDevDependency('grunt-shell', '^1.1.2');
           
-          // Shell task for Pattern Lab
-          var shell = this.options.getPlugin('grunt').getGruntTask('shell');
-          shell.insertConfig('shell.patternlab', this.fs.read(this.templatePath('tasks/patternlab/shell.js')));
-          shell.loadNpmTasks('grunt-shell');
-          this.options.addDevDependency('grunt-shell', '^1.1.2');
-          
-          done();
-        }
-      }
-      else {
         done();
       }
+      done();
     },
     gruntLibSass : function() {
       var done = this.async();
@@ -189,7 +195,7 @@ module.exports = generators.Base.extend({
           url = this.config.gessoDl;
           break;
       }
-      if (url && this.config.install_pattern_lab_confirm) {
+      if (url && this.config.install_gesso) {
         this.remoteAsync(url)
         .bind({})
         .then(function(remote) {
@@ -218,6 +224,13 @@ module.exports = generators.Base.extend({
       var done = this.async();
       var that = this;
       
+      if (this.config.install_pattern_lab) {
+        this.fs.copyTpl(
+          this.templatePath('gitignore'),
+          this.destinationPath('.gitignore'),
+          { }
+        );
+      }
       if (this.config.install_pattern_lab_confirm) {
         this.remoteAsync('dcmouyard', 'patternlab-php-gesso', 'master')
         .bind({})
