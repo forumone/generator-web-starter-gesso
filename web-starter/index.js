@@ -131,6 +131,17 @@ module.exports = generators.Base.extend({
         shell.loadNpmTasks('grunt-shell');
         this.options.addDevDependency('grunt-shell', '^1.1.2');
           
+        this.options.getPlugin('grunt').registerTask('buildPatternlab', [{
+          task : 'copy:patternlabStyleguide',
+          priority : 1
+        },
+        {
+          task : 'shell:patternlab',
+          priority : 2
+        }]);
+        
+        this.options.getPlugin('grunt').registerTask('build', 'buildPatternlab', 100);
+        
         done();
       }
       done();
@@ -157,6 +168,22 @@ module.exports = generators.Base.extend({
 
           var editor = this.options.getPlugin('grunt').getGruntTask('watch');
           editor.insertConfig('sass', this.fs.read(this.templatePath('tasks/sass/watch.js')));
+          
+          // Adding buildStyles for Libsass
+          this.options.getPlugin('grunt').registerTask('buildStyles', [{
+            task : 'sass_globbing:gesso',
+            priority : 1
+          },
+          {
+            task : 'sass:gesso',
+            priority : 2
+          },
+          {
+            task : 'postcss:gesso',
+            priority : 3
+          }]);
+          
+          this.options.getPlugin('grunt').registerTask('build', 'buildStyles', 50);
         }
         else {
           console.log('INFO unable to write libsass grunt task because Grunt plugin not selected for this project');
@@ -172,6 +199,14 @@ module.exports = generators.Base.extend({
           editor.insertConfig('compass', this.fs.read(this.templatePath('tasks/sass/compass.js')));
           editor.loadNpmTasks('grunt-contrib-compass');
           this.options.addDevDependency('grunt-contrib-compass', '^1.1.1');
+          
+          // Adding buildStyles for Ruby Sass
+          this.options.getPlugin('grunt').registerTask('buildStyles', [{
+            task : 'compass:dev',
+            priority : 1
+          }]);
+          
+          this.options.getPlugin('grunt').registerTask('build', 'buildStyles', 50);
         }
         else {
           console.log('INFO unable to write ruby sass grunt task because Grunt plugin not selected for this project');
