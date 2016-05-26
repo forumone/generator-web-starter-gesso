@@ -1,5 +1,5 @@
 'use strict';
-var generators = require('yeoman-generator'), 
+var generators = require('yeoman-generator'),
   _ = require('lodash'),
   Promise = require('bluebird'),
   rp = require('request-promise'),
@@ -8,19 +8,21 @@ var generators = require('yeoman-generator'),
   glob = Promise.promisify(require('glob')),
   http = require('http'),
   fs = require('fs'),
+  pkg = require('../package.json'),
   ygp = require('yeoman-generator-bluebird');
 
 var DRUPAL_GESSO_URL = "https://updates.drupal.org/release-history/gesso/all";
-var SASS_CHOICES = ['Libsass','Ruby Sass']
+var SASS_CHOICES = ['Libsass','Ruby Sass'];
 
 module.exports = generators.Base.extend({
   initializing : {
     async : function() {
       ygp(this);
+      this.options.addDevDependency(pkg.name, pkg.version);
     },
     version : function() {
       var done = this.async();
-      
+
       if (!this.options.parent) {
         // for test purposes
         this.options.parent = {};
@@ -28,7 +30,7 @@ module.exports = generators.Base.extend({
         this.options.parent.answers.platform = 'drupal';
       }
       var that = this;
-      
+
       if (this.options.parent.answers.platform === 'drupal') {
         rp({url : DRUPAL_GESSO_URL})
         .then(function(response) {
@@ -65,7 +67,7 @@ module.exports = generators.Base.extend({
         if (that.options.getPlugin('grunt')) {
           return true;
         }
-        console.log('INFO: you have to enable Grunt to be able to configure Sass here. Sass configuration skiped.');
+        that.log('INFO: you have to enable Grunt to be able to configure Sass here. Sass configuration skiped.');
         return false;
       }
     },
@@ -109,14 +111,14 @@ module.exports = generators.Base.extend({
   configuring : {
     gruntPatternlab : function() {
       var done = this.async();
-      
+
       if (typeof this.options.getPlugin === "function" && this.options.getPlugin('grunt') && this.config.install_pattern_lab) {
         // Add copy task for Pattern Lab
         var copy = this.options.getPlugin('grunt').getGruntTask('copy');
         copy.insertConfig('copy.patternlabStyleguide', this.fs.read(this.templatePath('tasks/patternlab/copy.js')));
         copy.loadNpmTasks('grunt-contrib-copy');
         this.options.addDevDependency('grunt-contrib-copy', '^0.8.0');
-          
+
         // Watch task for Pattern Lab
         var watch = this.options.getPlugin('grunt').getGruntTask('watch');
         watch.insertConfig('watch.patternlab', this.fs.read(this.templatePath('tasks/patternlab/watch.js')));
@@ -124,13 +126,13 @@ module.exports = generators.Base.extend({
         watch.loadNpmTasks('grunt-simple-watch');
         this.options.addDevDependency('grunt-contrib-watch', '^0.6.1');
         this.options.addDevDependency('grunt-simple-watch', '^0.1.2');
-        
+
         // Shell task for Pattern Lab
         var shell = this.options.getPlugin('grunt').getGruntTask('shell');
         shell.insertConfig('shell.patternlab', this.fs.read(this.templatePath('tasks/patternlab/shell.js')));
         shell.loadNpmTasks('grunt-shell');
         this.options.addDevDependency('grunt-shell', '^1.1.2');
-          
+
         this.options.getPlugin('grunt').registerTask('buildPatternlab', [{
           task : 'copy:patternlabStyleguide',
           priority : 1
@@ -139,9 +141,10 @@ module.exports = generators.Base.extend({
           task : 'shell:patternlab',
           priority : 2
         }]);
-        
+
+        //build => build.js buildPatternlab==task name 100 priority
         this.options.getPlugin('grunt').registerTask('build', 'buildPatternlab', 100);
-        
+
         done();
       }
       done();
@@ -168,7 +171,7 @@ module.exports = generators.Base.extend({
 
           var editor = this.options.getPlugin('grunt').getGruntTask('watch');
           editor.insertConfig('sass', this.fs.read(this.templatePath('tasks/sass/watch.js')));
-          
+
           // Adding buildStyles for Libsass
           this.options.getPlugin('grunt').registerTask('buildStyles', [{
             task : 'sass_globbing:gesso',
@@ -182,11 +185,11 @@ module.exports = generators.Base.extend({
             task : 'postcss:gesso',
             priority : 3
           }]);
-          
+
           this.options.getPlugin('grunt').registerTask('build', 'buildStyles', 50);
         }
         else {
-          console.log('INFO unable to write libsass grunt task because Grunt plugin not selected for this project');
+          this.log('INFO unable to write libsass grunt task because Grunt plugin not selected for this project');
         }
       }
       done();
@@ -199,17 +202,17 @@ module.exports = generators.Base.extend({
           editor.insertConfig('compass', this.fs.read(this.templatePath('tasks/sass/compass.js')));
           editor.loadNpmTasks('grunt-contrib-compass');
           this.options.addDevDependency('grunt-contrib-compass', '^1.1.1');
-          
+
           // Adding buildStyles for Ruby Sass
           this.options.getPlugin('grunt').registerTask('buildStyles', [{
             task : 'compass:dev',
             priority : 1
           }]);
-          
+
           this.options.getPlugin('grunt').registerTask('build', 'buildStyles', 50);
         }
         else {
-          console.log('INFO unable to write ruby sass grunt task because Grunt plugin not selected for this project');
+          this.log('INFO unable to write ruby sass grunt task because Grunt plugin not selected for this project');
         }
       }
       done();
