@@ -182,7 +182,7 @@ module.exports = generators.Base.extend({
             priority : 2
           },
           {
-            task : 'postcss:gesso',
+            task : 'postcss:theme',
             priority : 3
           }]);
 
