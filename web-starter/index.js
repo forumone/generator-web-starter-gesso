@@ -4,7 +4,8 @@ var generators = require('yeoman-generator'),
   Promise = require('bluebird'),
   rp = require('request-promise'),
   semver = require('semver'),
-  libxmljs = require("libxmljs"),
+  jsdom = Promise.promisifyAll(require('jsdom')),
+  wgxpath = require('wgxpath'),
   glob = Promise.promisify(require('glob')),
   http = require('http'),
   fs = require('fs'),
@@ -32,9 +33,12 @@ module.exports = generators.Base.extend({
       var that = this;
 
       if (this.options.parent.answers.platform === 'drupal') {
-        rp({url : DRUPAL_GESSO_URL})
-        .then(function(response) {
-          that.config.gessoDl = libxmljs.parseXml(response).get('//release/download_link').text();
+        jsdom.envAsync(DRUPAL_GESSO_URL, [], { parsingMode : 'xml' })
+        .then(function(window) {
+          wgxpath.install(window);
+          var expression = window.document.createExpression('//release/download_link');
+          var result = expression.evaluate(window.document, wgxpath.XPathResultType.STRING_TYPE);
+          that.config.gessoDl = result.stringValue;
         })
         .finally(function() {
           done();
@@ -158,7 +162,9 @@ module.exports = generators.Base.extend({
           editor.loadNpmTasks('grunt-postcss');
           editor.prependJavaScript('var assets  = require(\'postcss-assets\');');
           this.options.addDevDependency('grunt-postcss', '^0.8.0');
-
+          this.options.addDevDependency('postcss-assets', '^4.1.0');
+          this.options.addDevDependency('autoprefixer', '^6.3.6');
+          
           var editor = this.options.getPlugin('grunt').getGruntTask('sass');
           editor.insertConfig('sass', this.fs.read(this.templatePath('tasks/sass/sass.js')));
           editor.loadNpmTasks('grunt-sass');
@@ -185,6 +191,8 @@ module.exports = generators.Base.extend({
             task : 'postcss:gesso',
             priority : 3
           }]);
+          
+          this.bowerInstall('singularity', { saveDev : true });
 
           this.options.getPlugin('grunt').registerTask('build', 'buildStyles', 50);
         }
@@ -197,7 +205,7 @@ module.exports = generators.Base.extend({
     gruntRubySass : function() {
       var done = this.async();
       if (this.config.sass === SASS_CHOICES[1]) { // ruby sass
-        if(this.options.getPlugin('grunt')) {
+        if (this.options.getPlugin('grunt')) {
           var editor = this.options.getPlugin('grunt').getGruntTask('compass');
           editor.insertConfig('compass', this.fs.read(this.templatePath('tasks/sass/compass.js')));
           editor.loadNpmTasks('grunt-contrib-compass');
@@ -216,43 +224,52 @@ module.exports = generators.Base.extend({
         }
       }
       done();
+    },
+    themePath : function() {
+      
     }
   },
   writing : {
     theme : function() {
       var done = this.async();
       var that = this;
-      var url = null;
+      var promise = null;
       
-      switch (this.options.parent.answers.platform) {
-        case 'wordpress':
-          url = 'https://api.github.com/repos/forumone/gesso-theme-wordpress/tarball/master';
-          break;
-        
-        case 'drupal':
-          url = this.config.gessoDl;
-          break;
-      }
-      if (url && this.config.install_gesso) {
-        this.remoteAsync(url)
-        .bind({})
-        .then(function(remote) {
-          this.remotePath = remote.cachePath;
-          return glob('**', { cwd : remote.cachePath });
-        })
-        .then(function(files) {
-          var remotePath = this.remotePath;
+      if (this.config.install_gesso) {
+        switch (this.options.parent.answers.platform) {
+          case 'wordpress':
+            promise = this.remoteAsync('forumone', 'gesso-theme-wordpress', 'master');
+            break;
           
-          _.each(files, function(file) {
-            that.fs.copy(
-              remotePath + '/' + file,
-              that.destinationPath(that.options.parent.answers.theme_path + '/' + file)
-            );
+          case 'drupal':
+            promise = (this.config.sass === SASS_CHOICES[1]) ? this.remoteAsync(this.config.gessoDl) 
+                : this.remoteAsync('forumone', 'gesso-theme-libsass-drupal7', 'master');
+            break;
+        }
+        if (promise) {
+          promise.bind({})
+          .then(function(remote) {
+            this.remotePath = remote.cachePath;
+            return glob('**', { cwd : remote.cachePath });
+          })
+          .then(function(files) {
+            var remotePath = this.remotePath;
+            
+            _.each(files, function(file) {
+              that.fs.copy(
+                remotePath + '/' + file,
+                that.destinationPath(that.options.parent.answers.theme_path + '/' + file)
+              );
+            });
+          })
+          .finally(function() {
+            done();
           });
-        })
-        .finally(function() {
+        }
+        // TODO: Fix this deep nesting of conditionals
+        else {
           done();
-        });
+        }
       }
       else {
         done();

@@ -19,11 +19,13 @@
   "dependencies": {
     "bluebird": "^3.3.5",
     "glob": "^7.0.3",
+    "jsdom": "^9.2.1",
     "libxmljs": "^0.18.0",
     "lodash": "^4.11",
     "request-promise": "^2.0.1",
     "semver": "^5.1.0",
     "update-notifier": "^0.6.3",
+    "wgxpath": "^1.2.0",
     "yeoman-generator": "~0.22",
     "yeoman-generator-bluebird": "^0.1.0",
     "yosay": "^1.1.1"
