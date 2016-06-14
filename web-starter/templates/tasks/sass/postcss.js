@@ -9,6 +9,6 @@
     ]
   },
   theme: {
-    src: 'build/css/*.css'
+    src: '<%= pkg.buildPath %>/css/*.css'
   }
 }
