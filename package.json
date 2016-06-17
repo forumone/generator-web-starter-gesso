@@ -25,9 +25,9 @@
     "semver": "^5.1.0",
     "update-notifier": "^0.6.3",
     "wgxpath": "^1.2.0",
-    "yeoman-generator": "~0.22",
+    "yeoman-generator": "~0.23",
     "yeoman-generator-bluebird": "^0.1.0",
-    "yosay": "^1.1.1"
+    "yosay": "~1.1.1"
   },
   "engines": {
     "node": ">=0.8.0",
