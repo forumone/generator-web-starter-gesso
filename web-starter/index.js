@@ -22,8 +22,6 @@ module.exports = generators.Base.extend({
       this.options.addDevDependency(pkg.name, '~' + pkg.version);
     },
     version : function() {
-      var done = this.async();
-
       if (!this.options.parent) {
         // for test purposes
         this.options.parent = {};
@@ -33,30 +31,25 @@ module.exports = generators.Base.extend({
       var that = this;
 
       if (this.options.parent.answers.platform === 'drupal') {
-        jsdom.envAsync(DRUPAL_GESSO_URL, [], { parsingMode : 'xml' })
+        return jsdom.envAsync(DRUPAL_GESSO_URL, [], { parsingMode : 'xml' })
         .then(function(window) {
           wgxpath.install(window);
           var expression = window.document.createExpression('//release/download_link');
           var result = expression.evaluate(window.document, wgxpath.XPathResultType.STRING_TYPE);
           that.config.gessoDl = result.stringValue;
-        })
-        .finally(function() {
-          done();
         });
-      }
-      else {
-        done();
       }
     }
   },
   prompting : function() {
-    var done = this.async();
     var that = this;
+    
     var config = _.extend({
       install_pattern_lab : true,
       install_sass : true
     }, this.config.getAll());
-    this.promptAsync([{
+    
+    return this.prompt([{
       type: 'confirm',
       name: 'install_gesso',
       message: 'Install a fresh copy of the gesso theme?',
@@ -104,18 +97,17 @@ module.exports = generators.Base.extend({
         // asked
         return answers.install_pattern_lab;
       }
-    }]).then(function (answers) {
+    }])
+    .then(function (answers) {
       that.config.set(answers);
-      _.extend(that.config, answers);
-    })
-    .finally(function() {
-      done();
+      
+      answers.config = {};
+      // Expose the answers on the parent generator
+      _.extend(that.options.parent.answers, { 'web-starter-gesso' : answers });
     });
   },
   configuring : {
     gruntPatternlab : function() {
-      var done = this.async();
-
       if (typeof this.options.getPlugin === "function" && this.options.getPlugin('grunt') && this.config.install_pattern_lab) {
         // Add copy task for Pattern Lab
         var copy = this.options.getPlugin('grunt').getGruntTask('copy');
@@ -148,15 +140,11 @@ module.exports = generators.Base.extend({
 
         //build => build.js buildPatternlab==task name 100 priority
         this.options.getPlugin('grunt').registerTask('build', 'buildPatternlab', 100);
-
-        done();
       }
-      done();
     },
     gruntLibSass : function() {
-      var done = this.async();
       if (this.config.sass === SASS_CHOICES[0]) { //lib sass
-        if(this.options.getPlugin('grunt')) {
+        if (this.options.getPlugin('grunt')) {
           var editor = this.options.getPlugin('grunt').getGruntTask('postcss');
           editor.insertConfig('postcss', this.fs.read(this.templatePath('tasks/sass/postcss.js')));
           editor.loadNpmTasks('grunt-postcss');
@@ -200,10 +188,8 @@ module.exports = generators.Base.extend({
           this.log('INFO unable to write libsass grunt task because Grunt plugin not selected for this project');
         }
       }
-      done();
     },
     gruntRubySass : function() {
-      var done = this.async();
       if (this.config.sass === SASS_CHOICES[1]) { // ruby sass
         if (this.options.getPlugin('grunt')) {
           var editor = this.options.getPlugin('grunt').getGruntTask('compass');
@@ -223,7 +209,6 @@ module.exports = generators.Base.extend({
           this.log('INFO unable to write ruby sass grunt task because Grunt plugin not selected for this project');
         }
       }
-      done();
     },
     themePath : function() {
       
@@ -231,7 +216,6 @@ module.exports = generators.Base.extend({
   },
   writing : {
     theme : function() {
-      var done = this.async();
       var that = this;
       var promise = null;
       
@@ -246,33 +230,24 @@ module.exports = generators.Base.extend({
                 : this.remoteAsync('forumone', 'gesso-theme-libsass-drupal7', 'master');
             break;
         }
+        
         if (promise) {
-          promise.bind({})
+          var remotePath;
+          
+          return promise
           .then(function(remote) {
-            this.remotePath = remote.cachePath;
+            remotePath = remote.cachePath;
             return glob('**', { cwd : remote.cachePath });
           })
           .then(function(files) {
-            var remotePath = this.remotePath;
-            
             _.each(files, function(file) {
               that.fs.copy(
                 remotePath + '/' + file,
                 that.destinationPath(that.options.parent.answers.theme_path + '/' + file)
               );
             });
-          })
-          .finally(function() {
-            done();
           });
         }
-        // TODO: Fix this deep nesting of conditionals
-        else {
-          done();
-        }
-      }
-      else {
-        done();
       }
     },
     patternLab : function() {
