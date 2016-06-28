@@ -36,7 +36,7 @@ module.exports = generators.Base.extend({
           wgxpath.install(window);
           var expression = window.document.createExpression('//release/download_link');
           var result = expression.evaluate(window.document, wgxpath.XPathResultType.STRING_TYPE);
-          that.config.gessoDl = result.stringValue;
+          that.config.set('gessoDl', result.stringValue);
         });
       }
     }
@@ -108,7 +108,7 @@ module.exports = generators.Base.extend({
   },
   configuring : {
     gruntPatternlab : function() {
-      if (typeof this.options.getPlugin === "function" && this.options.getPlugin('grunt') && this.config.install_pattern_lab) {
+      if (typeof this.options.getPlugin === "function" && this.options.getPlugin('grunt') && this.config.get('install_pattern_lab')) {
         // Add copy task for Pattern Lab
         var copy = this.options.getPlugin('grunt').getGruntTask('copy');
         copy.insertConfig('copy.patternlabStyleguide', this.fs.read(this.templatePath('tasks/patternlab/copy.js')));
@@ -143,7 +143,7 @@ module.exports = generators.Base.extend({
       }
     },
     gruntLibSass : function() {
-      if (this.config.sass === SASS_CHOICES[0]) { //lib sass
+      if (this.config.get('sass') === SASS_CHOICES[0]) { //lib sass
         if (this.options.getPlugin('grunt')) {
           var editor = this.options.getPlugin('grunt').getGruntTask('postcss');
           editor.insertConfig('postcss', this.fs.read(this.templatePath('tasks/sass/postcss.js')));
@@ -190,7 +190,7 @@ module.exports = generators.Base.extend({
       }
     },
     gruntRubySass : function() {
-      if (this.config.sass === SASS_CHOICES[1]) { // ruby sass
+      if (this.config.get('sass') === SASS_CHOICES[1]) { // ruby sass
         if (this.options.getPlugin('grunt')) {
           var editor = this.options.getPlugin('grunt').getGruntTask('compass');
           editor.insertConfig('compass', this.fs.read(this.templatePath('tasks/sass/compass.js')));
@@ -219,14 +219,14 @@ module.exports = generators.Base.extend({
       var that = this;
       var promise = null;
       
-      if (this.config.install_gesso) {
+      if (this.config.get('install_gesso')) {
         switch (this.options.parent.answers.platform) {
           case 'wordpress':
             promise = this.remoteAsync('forumone', 'gesso-theme-wordpress', 'master');
             break;
           
           case 'drupal':
-            promise = (this.config.sass === SASS_CHOICES[1]) ? this.remoteAsync(this.config.gessoDl) 
+            promise = (this.config.get('sass') === SASS_CHOICES[1]) ? this.remoteAsync(this.config.get('gessoDl')) 
                 : this.remoteAsync('forumone', 'gesso-theme-libsass-drupal7', 'master');
             break;
         }
@@ -254,14 +254,14 @@ module.exports = generators.Base.extend({
       var done = this.async();
       var that = this;
       
-      if (this.config.install_pattern_lab) {
+      if (this.config.get('install_pattern_lab')) {
         this.fs.copyTpl(
           this.templatePath('gitignore'),
           this.destinationPath('.gitignore'),
           { }
         );
       }
-      if (this.config.install_pattern_lab_confirm) {
+      if (this.config.get('install_pattern_lab_confirm')) {
         this.remoteAsync('dcmouyard', 'patternlab-php-gesso', 'master')
         .bind({})
         .then(function(remote) {
