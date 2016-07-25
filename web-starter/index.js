@@ -227,7 +227,7 @@ module.exports = generators.Base.extend({
           
           case 'drupal':
             promise = (this.config.get('sass') === SASS_CHOICES[1]) ? this.remoteAsync(this.config.get('gessoDl')) 
-                : this.remoteAsync('forumone', 'gesso-theme-libsass-drupal7', 'master');
+                : this.remoteAsync('forumone', 'gesso', '7.x-1.x');
             break;
         }
         
@@ -257,7 +257,7 @@ module.exports = generators.Base.extend({
       if (this.config.get('install_pattern_lab')) {
         this.fs.copyTpl(
           this.templatePath('gitignore'),
-          this.destinationPath('.gitignore'),
+          this.destinationPath(that.options.parent.answers.theme_path + '/pattern-lab/.gitignore'),
           { }
         );
       }
