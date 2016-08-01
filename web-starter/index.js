@@ -2,68 +2,14 @@
 var generators = require('yeoman-generator'),
   _ = require('lodash'),
   Promise = require('bluebird'),
-  rp = require('request-promise'),
-  semver = require('semver'),
-  jsdom = Promise.promisifyAll(require('jsdom')),
-  wgxpath = require('wgxpath'),
   glob = Promise.promisify(require('glob')),
-  http = require('http'),
   fs = require('fs'),
   pkg = require('../package.json'),
-  ygp = require('yeoman-generator-bluebird');
+  ygp = require('yeoman-generator-bluebird'),
+  drupal_modules = require('drupal-modules');
 
 var DRUPAL_GESSO_URL = "https://updates.drupal.org/release-history/gesso/all";
 var SASS_CHOICES = ['Libsass','Ruby Sass'];
-
-function getDrupalGessoVersions() {
-  return jsdom.envAsync(DRUPAL_GESSO_URL, [], { parsingMode : 'xml' })
-  .then(function(window) {
-    wgxpath.install(window);
-    var expression = window.document.createExpression('//release');
-    var result = expression.evaluate(window.document, wgxpath.XPathResultType.ORDERED_NODE_ITERATOR_TYPE);
-    var rows = [];
-    
-    do {
-      var item = result.iterateNext();
-      if (item) {
-        rows.push(_.reduce(item.childNodes, function(val, node) {
-            if (1 == node.nodeType) {
-              val[node.nodeName] = node.childNodes[0].nodeValue;
-            }
-            
-            return val;
-          }, {}));
-      }
-    } while (item);
-    
-    var gessoReleases = _.chain(rows)
-      // Only return releases
-      .filter(function(row) {
-        return _.has(row, 'version_patch')
-      })
-      .reduce(function(val, row) {
-        // Convert naming from [major]-x.[minor].[patch] to [major].[minor].[patch]
-        var version = row.version.replace(/[^\d\.]+/g, '');
-        if (semver.valid(version)) {
-          var major = semver.major(version);
-          var minor = semver.minor(version);
-          
-          if (!_.find(val, { major : major, minor : minor })) {
-            val.push({
-              major : major,
-              minor : minor,
-              download_link : row.download_link
-            });
-          }
-        }
-        
-        return val;
-      }, [])
-      .value();
-    
-    return gessoReleases;
-  });
-}
 
 module.exports = generators.Base.extend({
   initializing : {
@@ -266,13 +212,13 @@ module.exports = generators.Base.extend({
             break;
           
           case 'drupal':
-            promise = getDrupalGessoVersions()
+            promise = drupal_modules.getLatestMinorVersions('gesso')
               .then(function(versions) {
                 // If the user selected Libsass use the most recent release
                 // Otherwise use the most recent release of 7.x-1.x
                 var url = (SASS_CHOICES[0] === that.config.get('sass')) ? 
-                    _.find(versions, { major : 7 }).download_link : 
-                    _.find(versions, { major : 7, minor : 1 }).download_link;
+                    _.find(versions, { version_major : 7 }).download_link : 
+                    _.find(versions, { version_major : 7, version_minor : 1 }).download_link;
                 
                 return that.remoteAsync(url);
               });
