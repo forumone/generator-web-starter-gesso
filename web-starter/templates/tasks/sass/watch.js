@@ -2,7 +2,7 @@
       options: {
         livereload: true,
       },
-      files : [ 'src/sass/**/*.scss', '!src/sass/partials/sass-globbing/**/*.scss' ],
+      files : [ '<%= pkg.themePath %>/sass/**/*.scss', '!<%= pkg.themePath %>/sass/partials/sass-globbing/**/*.scss' ],
       tasks : [
         // 'modernizr',
         'compileStyles',
