@@ -4,8 +4,6 @@
       },
       files : [ '<%= pkg.themePath %>/sass/**/*.scss', '!<%= pkg.themePath %>/sass/partials/sass-globbing/**/*.scss' ],
       tasks : [
-        // 'modernizr',
-        'compileStyles',
-        'sync:build',
+        'buildStyles'
       ],
     }
