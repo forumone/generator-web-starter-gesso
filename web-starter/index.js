@@ -29,12 +29,12 @@ module.exports = generators.Base.extend({
   },
   prompting : function() {
     var that = this;
-    
+
     var config = _.extend({
       install_pattern_lab : true,
       install_sass : true
     }, this.config.getAll());
-    
+
     return this.prompt([{
       type: 'confirm',
       name: 'install_gesso',
@@ -86,7 +86,7 @@ module.exports = generators.Base.extend({
     }])
     .then(function (answers) {
       that.config.set(answers);
-      
+
       answers.config = {};
       // Expose the answers on the parent generator
       _.extend(that.options.parent.answers, { 'web-starter-gesso' : answers });
@@ -138,7 +138,7 @@ module.exports = generators.Base.extend({
           this.options.addDevDependency('grunt-postcss', '^0.8.0');
           this.options.addDevDependency('postcss-assets', '^4.1.0');
           this.options.addDevDependency('autoprefixer', '^6.3.6');
-          
+
           var editor = this.options.getPlugin('grunt').getGruntTask('sass');
           editor.insertConfig('sass', this.fs.read(this.templatePath('tasks/sass/sass.js')));
           editor.loadNpmTasks('grunt-sass');
@@ -165,7 +165,7 @@ module.exports = generators.Base.extend({
             task : 'postcss:theme',
             priority : 3
           }]);
-          
+
           this.bowerInstall('singularity', { saveDev : true });
 
           this.options.getPlugin('grunt').registerTask('build', 'buildStyles', 50);
@@ -197,33 +197,33 @@ module.exports = generators.Base.extend({
       }
     },
     themePath : function() {
-      
+
     }
   },
   writing : {
     theme : function() {
       var that = this;
       var promise = null;
-      
+
       if (this.config.get('install_gesso')) {
         switch (this.options.parent.answers.platform) {
           case 'wordpress':
-            promise = this.remoteAsync('forumone', 'gesso-theme-wordpress', 'master');
+            promise = this.remoteAsync('forumone', 'gesso-wp', 'master');
             break;
-          
+
           case 'drupal':
             promise = drupal_modules.getLatestMinorVersions('gesso')
               .then(function(versions) {
                 // If the user selected Libsass use the most recent release
                 // Otherwise use the most recent release of 7.x-1.x
-                var url = (SASS_CHOICES[0] === that.config.get('sass')) ? 
-                    _.find(versions, { version_major : 7 }).download_link : 
+                var url = (SASS_CHOICES[0] === that.config.get('sass')) ?
+                    _.find(versions, { version_major : 7 }).download_link :
                     _.find(versions, { version_major : 7, version_minor : 1 }).download_link;
-                
+
                 return that.remoteAsync(url);
               });
             break;
-            
+
           case 'drupal8':
             promise = drupal_modules.getVersions('gesso')
               .then(function(versions) {
@@ -232,10 +232,10 @@ module.exports = generators.Base.extend({
               });
             break;
         }
-        
+
         if (promise) {
           var remotePath;
-          
+
           return promise
           .then(function(remote) {
             remotePath = remote.cachePath;
@@ -255,7 +255,7 @@ module.exports = generators.Base.extend({
     patternLab : function() {
       var done = this.async();
       var that = this;
-      
+
       if (this.config.get('install_pattern_lab')) {
         this.fs.copyTpl(
           this.templatePath('gitignore'),
@@ -272,7 +272,7 @@ module.exports = generators.Base.extend({
         })
         .then(function(files) {
           var remotePath = this.remotePath;
-          
+
           _.each(files, function(file) {
             that.fs.copy(
               remotePath + '/' + file,
