@@ -36,12 +36,6 @@ module.exports = generators.Base.extend({
       name: 'install_gesso',
       message: 'Install a fresh copy of the gesso theme?',
       default: false
-    },
-    {
-      type: 'confirm',
-      name: 'install_pattern_lab',
-      message: 'Does this project use Pattern Lab?',
-      default: config.install_pattern_lab,
     }])
     .then(function (answers) {
       that.config.set(answers);
