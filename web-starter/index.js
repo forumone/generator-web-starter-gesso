@@ -30,8 +30,7 @@ module.exports = generators.Base.extend({
     var that = this;
 
     var config = _.extend({
-      install_pattern_lab : true,
-      install_sass : true
+      install_pattern_lab : true
     }, this.config.getAll());
 
     return this.prompt([{
