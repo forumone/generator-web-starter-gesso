@@ -31,7 +31,6 @@ module.exports = generators.Base.extend({
     var that = this;
 
     var config = _.extend({
-      install_pattern_lab : true,
       install_sass : true
     }, this.config.getAll());
 
@@ -72,17 +71,6 @@ module.exports = generators.Base.extend({
       name: 'install_pattern_lab',
       message: 'Does this project use Pattern Lab?',
       default: config.install_pattern_lab,
-    },
-    {
-      type: 'confirm',
-      name: 'install_pattern_lab_confirm',
-      message: 'Install a fresh copy of Pattern Lab?',
-      default: false,
-      when: function(answers) {
-        // if the user doesn't want to install pattern lab, this question is not
-        // asked
-        return answers.install_pattern_lab;
-      }
     }])
     .then(function (answers) {
       that.config.set(answers);
@@ -94,7 +82,7 @@ module.exports = generators.Base.extend({
   },
   configuring : {
     gruntPatternlab : function() {
-      if (typeof this.options.getPlugin === "function" && this.options.getPlugin('grunt') && this.config.get('install_pattern_lab')) {
+      if (typeof this.options.getPlugin === "function" && this.options.getPlugin('grunt')) {
         // Add copy task for Pattern Lab
         var copy = this.options.getPlugin('grunt').getGruntTask('copy');
         copy.insertConfig('copy.patternlabStyleguide', this.fs.read(this.templatePath('tasks/patternlab/copy.js')));
@@ -262,30 +250,6 @@ module.exports = generators.Base.extend({
           this.destinationPath(this.options.parent.answers.theme_path + '/pattern-lab/.gitignore'),
           { }
         );
-      }
-      if (this.config.get('install_pattern_lab_confirm')) {
-        this.remoteAsync('dcmouyard', 'patternlab-php-gesso', 'master')
-        .bind({})
-        .then(function(remote) {
-          this.remotePath = remote.cachePath;
-          return glob('**', { cwd : remote.cachePath });
-        })
-        .then(function(files) {
-          var remotePath = this.remotePath;
-
-          _.each(files, function(file) {
-            that.fs.copy(
-              remotePath + '/' + file,
-              that.destinationPath(that.options.parent.answers.theme_path + '/pattern-lab/' + file)
-            );
-          });
-        })
-        .finally(function() {
-          done();
-        });
-      }
-      else {
-        done();
       }
     }
   }
