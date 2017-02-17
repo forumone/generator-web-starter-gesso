@@ -9,7 +9,6 @@ var generators = require('yeoman-generator'),
   drupal_modules = require('drupal-modules');
 
 var DRUPAL_GESSO_URL = "https://updates.drupal.org/release-history/gesso/all";
-var SASS_CHOICES = ['Libsass','Ruby Sass'];
 
 module.exports = generators.Base.extend({
   initializing : {
@@ -31,8 +30,7 @@ module.exports = generators.Base.extend({
     var that = this;
 
     var config = _.extend({
-      install_pattern_lab : true,
-      install_sass : true
+      install_pattern_lab : true
     }, this.config.getAll());
 
     return this.prompt([{
@@ -40,32 +38,6 @@ module.exports = generators.Base.extend({
       name: 'install_gesso',
       message: 'Install a fresh copy of the gesso theme?',
       default: false
-    },
-    {
-      type: 'confirm',
-      name: 'install_sass',
-      message: 'Does this project use Sass?',
-      default: config.install_sass,
-      when: function(answers) {
-        if (that.options.getPlugin('grunt')) {
-          return true;
-        }
-        that.log('INFO: you have to enable Grunt to be able to configure Sass here. Sass configuration skiped.');
-        return false;
-      }
-    },
-    {
-      type : 'list',
-      name : 'sass',
-      choices : SASS_CHOICES,
-      message : 'Sass compilation',
-      default : config.sass,
-      when: function(answers) {
-        if (that.options.getPlugin('grunt') && answers.install_sass) {
-          return true;
-        }
-        return false;
-      }
     },
     {
       type: 'confirm',
@@ -129,71 +101,48 @@ module.exports = generators.Base.extend({
       }
     },
     gruntLibSass : function() {
-      if (this.config.get('sass') === SASS_CHOICES[0]) { //lib sass
-        if (this.options.getPlugin('grunt')) {
-          var editor = this.options.getPlugin('grunt').getGruntTask('postcss');
-          editor.insertConfig('postcss', this.fs.read(this.templatePath('tasks/sass/postcss.js')));
-          editor.loadNpmTasks('grunt-postcss');
-          editor.prependJavaScript('var assets  = require(\'postcss-assets\');');
-          this.options.addDevDependency('grunt-postcss', '^0.8.0');
-          this.options.addDevDependency('postcss-assets', '^4.1.0');
-          this.options.addDevDependency('autoprefixer', '^6.3.6');
+      if (this.options.getPlugin('grunt')) {
+        var editor = this.options.getPlugin('grunt').getGruntTask('postcss');
+        editor.insertConfig('postcss', this.fs.read(this.templatePath('tasks/sass/postcss.js')));
+        editor.loadNpmTasks('grunt-postcss');
+        editor.prependJavaScript('var assets  = require(\'postcss-assets\');');
+        this.options.addDevDependency('grunt-postcss', '^0.8.0');
+        this.options.addDevDependency('postcss-assets', '^4.1.0');
+        this.options.addDevDependency('autoprefixer', '^6.3.6');
 
-          var editor = this.options.getPlugin('grunt').getGruntTask('sass');
-          editor.insertConfig('sass', this.fs.read(this.templatePath('tasks/sass/sass.js')));
-          editor.loadNpmTasks('grunt-sass');
-          this.options.addDevDependency('grunt-sass', '^1.2.0');
+        var editor = this.options.getPlugin('grunt').getGruntTask('sass');
+        editor.insertConfig('sass', this.fs.read(this.templatePath('tasks/sass/sass.js')));
+        editor.loadNpmTasks('grunt-sass');
+        this.options.addDevDependency('grunt-sass', '^1.2.0');
 
-          var editor = this.options.getPlugin('grunt').getGruntTask('sass_globbing');
-          editor.insertConfig('sass_globbing', this.fs.read(this.templatePath('tasks/sass/sass_globbing.js')));
-          editor.loadNpmTasks('grunt-sass-globbing');
-          this.options.addDevDependency('grunt-sass-globbing', '^1.4.0');
+        var editor = this.options.getPlugin('grunt').getGruntTask('sass_globbing');
+        editor.insertConfig('sass_globbing', this.fs.read(this.templatePath('tasks/sass/sass_globbing.js')));
+        editor.loadNpmTasks('grunt-sass-globbing');
+        this.options.addDevDependency('grunt-sass-globbing', '^1.4.0');
 
-          var editor = this.options.getPlugin('grunt').getGruntTask('watch');
-          editor.insertConfig('sass', this.fs.read(this.templatePath('tasks/sass/watch.js')));
+        var editor = this.options.getPlugin('grunt').getGruntTask('watch');
+        editor.insertConfig('sass', this.fs.read(this.templatePath('tasks/sass/watch.js')));
 
-          // Adding buildStyles for Libsass
-          this.options.getPlugin('grunt').registerTask('buildStyles', [{
-            task : 'sass_globbing:gesso',
-            priority : 1
-          },
-          {
-            task : 'sass:gesso',
-            priority : 2
-          },
-          {
-            task : 'postcss:theme',
-            priority : 3
-          }]);
+        // Adding buildStyles for Libsass
+        this.options.getPlugin('grunt').registerTask('buildStyles', [{
+          task : 'sass_globbing:gesso',
+          priority : 1
+        },
+        {
+          task : 'sass:gesso',
+          priority : 2
+        },
+        {
+          task : 'postcss:theme',
+          priority : 3
+        }]);
 
-          this.bowerInstall('singularity', { saveDev : true });
+        this.bowerInstall('singularity', { saveDev : true });
 
-          this.options.getPlugin('grunt').registerTask('build', 'buildStyles', 50);
-        }
-        else {
-          this.log('INFO unable to write libsass grunt task because Grunt plugin not selected for this project');
-        }
+        this.options.getPlugin('grunt').registerTask('build', 'buildStyles', 50);
       }
-    },
-    gruntRubySass : function() {
-      if (this.config.get('sass') === SASS_CHOICES[1]) { // ruby sass
-        if (this.options.getPlugin('grunt')) {
-          var editor = this.options.getPlugin('grunt').getGruntTask('compass');
-          editor.insertConfig('compass', this.fs.read(this.templatePath('tasks/sass/compass.js')));
-          editor.loadNpmTasks('grunt-contrib-compass');
-          this.options.addDevDependency('grunt-contrib-compass', '^1.1.1');
-
-          // Adding buildStyles for Ruby Sass
-          this.options.getPlugin('grunt').registerTask('buildStyles', [{
-            task : 'compass:dev',
-            priority : 1
-          }]);
-
-          this.options.getPlugin('grunt').registerTask('build', 'buildStyles', 50);
-        }
-        else {
-          this.log('INFO unable to write ruby sass grunt task because Grunt plugin not selected for this project');
-        }
+      else {
+        this.log('INFO unable to write libsass grunt task because Grunt plugin not selected for this project');
       }
     },
     themePath : function() {
@@ -214,11 +163,7 @@ module.exports = generators.Base.extend({
           case 'drupal':
             promise = drupal_modules.getLatestMinorVersions('gesso')
               .then(function(versions) {
-                // If the user selected Libsass use the most recent release
-                // Otherwise use the most recent release of 7.x-1.x
-                var url = (SASS_CHOICES[0] === that.config.get('sass')) ?
-                    _.find(versions, { version_major : 7 }).download_link :
-                    _.find(versions, { version_major : 7, version_minor : 1 }).download_link;
+                var url = _.find(versions, { version_major : 7 }).download_link;
 
                 return that.remoteAsync(url);
               });
