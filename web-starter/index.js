@@ -189,6 +189,8 @@ module.exports = generators.Base.extend({
           { }
         );
       }
+
+      done();
     }
   }
 });
