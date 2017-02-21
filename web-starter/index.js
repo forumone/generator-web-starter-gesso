@@ -142,11 +142,20 @@ module.exports = generators.Base.extend({
             break;
 
           case 'drupal':
-            promise = this.remoteAsync('forumone', 'gesso', '7.x-2.x');
+            promise = drupal_modules.getLatestMinorVersions('gesso')
+              .then(function(versions) {
+                var url = _.find(versions, { version_major : 7 }).download_link;
+
+                return that.remoteAsync(url);
+              });
             break;
 
           case 'drupal8':
-            promise = this.remoteAsync('forumone', 'gesso', '8.x-1.x');
+            promise = drupal_modules.getVersions('gesso')
+              .then(function(versions) {
+                var url = _.find(versions, { version_major : 8, version_minor : 1 }).download_link;
+                return that.remoteAsync(url, true);
+              });
             break;
         }
 
