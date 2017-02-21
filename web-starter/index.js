@@ -5,11 +5,7 @@ var generators = require('yeoman-generator'),
   glob = Promise.promisify(require('glob')),
   fs = require('fs'),
   pkg = require('../package.json'),
-  ygp = require('yeoman-generator-bluebird'),
-  drupal_modules = require('drupal-modules');
-
-var DRUPAL_GESSO_URL = "https://updates.drupal.org/release-history/gesso/all";
-var SASS_CHOICES = ['Libsass','Ruby Sass'];
+  ygp = require('yeoman-generator-bluebird');
 
 module.exports = generators.Base.extend({
   initializing : {
