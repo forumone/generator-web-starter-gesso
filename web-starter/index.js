@@ -212,24 +212,11 @@ module.exports = generators.Base.extend({
             break;
 
           case 'drupal':
-            promise = drupal_modules.getLatestMinorVersions('gesso')
-              .then(function(versions) {
-                // If the user selected Libsass use the most recent release
-                // Otherwise use the most recent release of 7.x-1.x
-                var url = (SASS_CHOICES[0] === that.config.get('sass')) ?
-                    _.find(versions, { version_major : 7 }).download_link :
-                    _.find(versions, { version_major : 7, version_minor : 1 }).download_link;
-
-                return that.remoteAsync(url);
-              });
+            promise = this.remoteAsync('forumone', 'gesso', '7.x-2.x');
             break;
 
           case 'drupal8':
-            promise = drupal_modules.getVersions('gesso')
-              .then(function(versions) {
-                var url = _.find(versions, { version_major : 8, version_minor : 1 }).download_link;
-                return that.remoteAsync(url, true);
-              });
+            promise = this.remoteAsync('forumone', 'gesso', '8.x-1.x');
             break;
         }
 
