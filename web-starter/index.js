@@ -239,7 +239,7 @@ module.exports = generators.Base.extend({
           return promise
           .then(function(remote) {
             remotePath = remote.cachePath;
-            return glob('**', { cwd : remote.cachePath });
+            return glob('**', { cwd : remote.cachePath, dot : true });
           })
           .then(function(files) {
             _.each(files, function(file) {
