@@ -80,9 +80,8 @@ module.exports = generators.Base.extend({
         if (remote) {
           remotePath = remote.cachePath;
           return glob('**', { cwd: remote.cachePath, dot: true });
-        }
-        else {
-          Promise.resolve([]);
+        } else {
+          return Promise.resolve([]);
         }
       })
       .then(function (files) {
