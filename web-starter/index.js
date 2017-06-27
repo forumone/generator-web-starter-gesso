@@ -48,8 +48,8 @@ module.exports = generators.Base.extend({
     });
   },
   configuring: {
-    addGruntTasks : function () {
-      if (typeof this.options.getPlugin === "function" && this.options.getPlugin('grunt')) {
+    addGruntTasks: function () {
+      if (typeof this.options.getPlugin === 'function' && this.options.getPlugin('grunt')) {
         var shell = this.options.getPlugin('grunt').getGruntTask('shell');
         shell.insertConfig('shell.gessoWatch', this.fs.read(this.templatePath('tasks/config/shell_gesso_watch.js')));
         shell.insertConfig('shell.gessoBuild', this.fs.read(this.templatePath('tasks/config/shell_gesso_build.js')));
@@ -57,13 +57,13 @@ module.exports = generators.Base.extend({
         this.options.addDevDependency('grunt-shell', '^2.1.0');
 
         this.options.getPlugin('grunt').registerWatchTask('shell:gessoWatch');
-        
+
         this.options.getPlugin('grunt').registerTask('build', [{
-          task : 'shell:gessoBuild',
-          priority : 1
+          task: 'shell:gessoBuild',
+          priority: 1,
         }]);
       }
-    }
+    },
   },
   writing: {
     theme: function () {
