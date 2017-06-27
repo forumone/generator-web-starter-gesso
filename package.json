@@ -1,7 +1,7 @@
 {
   "name": "generator-web-starter-gesso",
   "version": "0.2.0",
-  "description": "A grunt yeoman sub-generator for web-starter",
+  "description": "A Gesso yeoman sub-generator for web-starter",
   "keywords": [
     "yeoman-generator"
   ],
@@ -29,6 +29,9 @@
     "yeoman-generator": "~0.23",
     "yeoman-generator-bluebird": "^0.1.0",
     "yosay": "~1.1.1"
+  },
+  "peerDependencies": {
+    "generator-web-starter-grunt": "^0.2.0"
   },
   "engines": {
     "node": ">=0.8.0",
