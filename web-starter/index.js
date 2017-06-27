@@ -48,6 +48,22 @@ module.exports = generators.Base.extend({
     });
   },
   configuring: {
+    addGruntTasks: function () {
+      if (typeof this.options.getPlugin === 'function' && this.options.getPlugin('grunt')) {
+        var shell = this.options.getPlugin('grunt').getGruntTask('shell');
+        shell.insertConfig('shell.gessoWatch', this.fs.read(this.templatePath('tasks/config/shell_gesso_watch.js')));
+        shell.insertConfig('shell.gessoBuild', this.fs.read(this.templatePath('tasks/config/shell_gesso_build.js')));
+        shell.loadNpmTasks('grunt-shell');
+        this.options.addDevDependency('grunt-shell', '^2.1.0');
+
+        this.options.getPlugin('grunt').registerWatchTask('shell:gessoWatch');
+
+        this.options.getPlugin('grunt').registerTask('build', [{
+          task: 'shell:gessoBuild',
+          priority: 1,
+        }]);
+      }
+    },
   },
   writing: {
     theme: function () {
@@ -57,15 +73,15 @@ module.exports = generators.Base.extend({
       if (this.config.get('install_gesso')) {
         switch (this.options.parent.answers.platform) {
           case 'wordpress':
-            promise = this.remoteAsync('forumone', GESSO_WORDPRESS_REPO, GESSO_BRANCH_WORDPRESS);
+            promise = this.remoteAsync('forumone', GESSO_WORDPRESS_REPO, GESSO_BRANCH_WORDPRESS, true);
             break;
 
           case 'drupal':
-            promise = this.remoteAsync('forumone', GESSO_DRUPAL_REPO, GESSO_BRANCH_DRUPAL_7);
+            promise = this.remoteAsync('forumone', GESSO_DRUPAL_REPO, GESSO_BRANCH_DRUPAL_7, true);
             break;
 
           case 'drupal8':
-            promise = this.remoteAsync('forumone', GESSO_DRUPAL_REPO, GESSO_BRANCH_DRUPAL_8);
+            promise = this.remoteAsync('forumone', GESSO_DRUPAL_REPO, GESSO_BRANCH_DRUPAL_8, true);
             break;
 
           default:
