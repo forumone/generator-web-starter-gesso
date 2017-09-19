@@ -50,7 +50,9 @@ module.exports = generators.Base.extend({
   configuring: {
     addGruntTasks: function () {
       if (typeof this.options.getPlugin === 'function' && this.options.getPlugin('grunt')) {
-        var shell = this.options.getPlugin('grunt').getGruntTask('shell');
+        var grunt = this.options.getPlugin('grunt');
+
+        var shell = grunt.getGruntTask('shell');
         shell.insertConfig('shell.gessoWatch', this.fs.read(this.templatePath('tasks/config/shell_gesso_watch.js')));
         shell.insertConfig('shell.gessoBuild', this.fs.read(this.templatePath('tasks/config/shell_gesso_build.js')));
         shell.loadNpmTasks('grunt-shell');
@@ -61,6 +63,16 @@ module.exports = generators.Base.extend({
         this.options.getPlugin('grunt').registerTask('build', [{
           task: 'shell:gessoBuild',
           priority: 1,
+        }]);
+
+        grunt.registerTask('default', [{
+          task: 'build',
+          priority: 50,
+        }]);
+
+        grunt.registerTask('default', [{
+          task: 'concurrent:watch',
+          priority: 99,
         }]);
       }
     },
