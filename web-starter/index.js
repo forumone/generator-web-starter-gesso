@@ -9,7 +9,7 @@ var ygp = require('yeoman-generator-bluebird');
 
 // TODO: Replace with const
 var GESSO_DRUPAL_REPO = 'gesso';
-var GESSO_BRANCH_DRUPAL_7 = '7.x-2.x';
+var GESSO_BRANCH_DRUPAL_7 = '7.x-3.x';
 var GESSO_BRANCH_DRUPAL_8 = '8.x-1.x';
 
 var GESSO_WORDPRESS_REPO = 'gesso-wp';
