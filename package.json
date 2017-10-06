@@ -1,6 +1,6 @@
 {
   "name": "generator-web-starter-gesso",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "A Gesso yeoman sub-generator for web-starter",
   "keywords": [
     "yeoman-generator"
