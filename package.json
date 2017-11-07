@@ -31,7 +31,7 @@
     "yosay": "~1.1.1"
   },
   "peerDependencies": {
-    "generator-web-starter-grunt": ">0.2.0"
+    "generator-web-starter-grunt": ">=0.2.0"
   },
   "engines": {
     "node": ">=0.8.0",
